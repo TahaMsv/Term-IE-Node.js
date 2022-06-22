@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const error = require("../utilities/errorFunction");
 const Student = require("../models/student");
-const student = require("../models/student");
+const Course = require("../models/course");
 
 router.post("/", async (req, res, next) => {
     const { studentid } = req.body;
@@ -36,19 +36,35 @@ router.post("/", async (req, res, next) => {
 });
 
 router.get("/", async (req, res, next) => {
-    Student.find({}).select('-_id student_id average courses last_update').exec((err, docs) => {
-        const studentsListResponse = docs.map(item => {
+    Student.find({}).select('-_id student_id average courses last_update').exec(async (err, docs) => {
+        const studentsList = []
+        const studentsListResolveFlag = []
+        await new Promise((resolve, reject) => docs.forEach(async item => {
             const newMap = {};
             newMap.studentid = item.student_id;
             newMap.average = item.average;
-            newMap.Courses = item.courses;
+            const resolveFlagArray = []
+            const userCourses = []
+            await new Promise((resolve, reject) => item.courses.forEach(async courseId => {
+                const course = await Course.findOne({ _id: courseId }).select('-_id id name grade');
+                if(course) resolveFlagArray.push(course)
+                if(course) userCourses.push(course)
+                if(resolveFlagArray.length === item.courses.length)
+                    resolve()
+            }))
+            newMap.courses = userCourses 
             newMap.last_update = item.last_update;
-            return newMap;
-        })
+            studentsList.push(newMap)
+            studentsListResolveFlag.push(newMap)
+            if(studentsListResolveFlag.length === docs.length)
+                resolve()
+
+        }))
+        console.log(studentsList)
         return res.status(200).json(
             {
                 "size": docs.length,
-                "students": studentsListResponse,
+                "students": studentsList,
                 "code": 200,
                 "message": "All students received successfully!"
             }
