@@ -54,12 +54,9 @@ router.post("/:studentid/course", async (req, res, next) => {
 
 router.get("/:studentid", async (req, res, next) => {
     const studentId = req.params.studentid;
-    console.log("here57");
     Student.find({ student_id: studentId }).select('-_id student_id average courses last_update').exec(async (err, docs) => {
-        console.log("here59");
         const courseList = docs[0].courses.map(async courseid => {
             const course = await (Course.findOne({ _id: courseid }));
-            console.log(course);
             const newMap = {};
             newMap.name = course.name;
             newMap.id = course.id;
@@ -67,7 +64,6 @@ router.get("/:studentid", async (req, res, next) => {
             return newMap;
         });
         const list = await Promise.all(courseList);
-        console.log("here69");
         return res.status(200).json(
             {
                 "studentid": docs[0].student_id,
@@ -81,17 +77,54 @@ router.get("/:studentid", async (req, res, next) => {
     });
 });
 
-router.put(":studentid/:courseid", async (req, res, next) => {
+router.put("/:studentid/:courseid", async (req, res, next) => {
     const { name, id, grade } = req.body;
     const studentId = req.params.studentid;
     const courseId = req.params.courseid;
 
-    return res.status(200).json({
-        "message": "Put courses" + studentId + " " + courseId
+    if (!studentId) {
+        return error(res, "Student id is empty");
+    }
+
+    const student = await (Student.findOne({ student_id: studentId }));
+    if (!student) return error(res, "Student doest not exist");
+
+    const existCourse = await (Course.findOne({ id: courseId }));
+    if (!existCourse) return error(res, "Course doest not exist");
+
+    let found = false;
+    const courseList = await student.courses.map(async courseid => {
+        console.log("here96");
+        const course = await (Course.findOne({ _id: courseid }));
+        console.log("here98");
+        if (course && course.id == courseId) {
+            console.log("here100");
+            const lastGrade = course.grade;
+            course.name = name;
+            course.id = id;
+            course.grade = grade;
+            course.save();
+            const numberOfCourses = Object.keys(student.courses).length;
+            const newAverage = ((numberOfCourses * student.average) - lastGrade + grade) / (numberOfCourses);
+            student.average = newAverage;
+            student.last_updated = Date.now();
+            student.save();
+            found = true;
+            return res.status(200).json({
+                name,
+                id,
+                grade,
+                "code": 200,
+                "message": "grade updated successfully!"
+            });
+
+        }
     });
+    const list = await Promise.all(courseList);
+    if (!found) return error(res, "Student doest not have this course");
 });
 
-router.delete(":studentid/:courseid", async (req, res, next) => {
+router.delete("/:studentid/:courseid", async (req, res, next) => {
     const studentId = req.params.studentid;
     const courseId = req.params.courseid;
 
