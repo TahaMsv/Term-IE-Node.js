@@ -7,7 +7,7 @@ const app = express();
 const studentsRoutes = require("./api/routes/students");
 const coursesRoutes = require("./api/routes/courses");
 
-mongoose.connect('mongodb://localhost/chatMessenger');
+mongoose.connect('mongodb://localhost/Student&Courses');
 app.use(morgan("dev"));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -26,7 +26,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/students", studentsRoutes);
-app.use("/:studentid", coursesRoutes);
+app.use("/", coursesRoutes);
 
 app.use((req, res, next) => {
     const error = new Error("Not found");

@@ -5,15 +5,16 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const error = require("../utilities/errorFunction");
 const Student = require("../models/student");
+const student = require("../models/student");
 
 router.post("/", async (req, res, next) => {
     const { studentid } = req.body;
 
     if (!studentid) {
-        return error(res, "Name, email or password is empty");
+        return error(res, "Student id  is empty");
     }
 
-    const otherStudent = await (Student.findOne({ studentid }));
+    const otherStudent = await (Student.findOne({ student_id: studentid }));
 
     if (otherStudent) return error(res, "Student id already exist");
 
@@ -25,22 +26,23 @@ router.post("/", async (req, res, next) => {
 
     return res.status(200).json({
         "studentid": newStudent.student_id,
-        "average": newStudent.student_id.average,
+        "average": newStudent.average,
         "courses": newStudent.courses,
-        "last_updated": newStudent.student_id.last_updated,
+        "last_updated": newStudent.last_update,
         "code": 200,
         "message": "student added successfully!"
     });
 
 });
 
-router.get("/", (req, res, next) => {
+router.get("/", async (req, res, next) => {
     Student.find({}).select('-_id student_id average courses last_update').exec((err, docs) => {
         const studentsListResponse = docs.map(item => {
             const newMap = {};
             newMap.studentid = item.student_id;
+            newMap.average = item.average;
             newMap.Courses = item.courses;
-            newMap.last_updated = item.last_update;
+            newMap.last_update = item.last_update;
             return newMap;
         })
         return res.status(200).json(
@@ -53,25 +55,60 @@ router.get("/", (req, res, next) => {
         );
     });
 
-    return res.status(200).json({
-        "message": "Get students"
-    });
 });
 
-router.put("/:studentid", (req, res, next) => {
+router.put("/:studentid", async (req, res, next) => {
     const { studentid } = req.body;
     const currStudentId = req.params.studentid;
+
+    console.log("here66");
+    if (!studentid || !currStudentId) {
+        return error(res, "Student id  is empty");
+    }
+    const student = await (Student.findOne({ student_id: currStudentId }));
+    const newStudent = await (Student.findOne({ student_id: studentid }));
+    if (!student) {
+
+        return error(res, "Student does not exist");
+    }
+    if (newStudent) {
+
+        return error(res, "Student id already exist");
+    }
+    student.student_id = studentid;
+    student.save();
     return res.status(200).json({
-        "message": "Put students " + studentId
-    });
+        "studentid": student.student_id,
+        "average": student.average,
+        "Courses": student.courses,
+        "last_updated": student.last_update,
+        "code": 200,
+        "message": "studentid changed successfully!"
+    }
+    );
 });
 
-router.delete("/:studentid", (req, res, next) => {
-    const studentId = req.params.studentid;
+router.delete("/:studentid", async (req, res, next) => {
+    const studentid = req.params.studentid;
+
+    if (!studentid) {
+        return error(res, "Student id  is empty");
+    }
+
+    const student = await (Student.findOne({ student_id: studentid }));
+
+    if (!student) return error(res, "Student doest not exist");
+    student.remove();
 
     return res.status(200).json({
-        "message": "Delete students" + studentId
-    });
+        "studentid": student.student_id,
+        "average": student.average,
+        "Courses": student.courses,
+        "last_updated": student.last_update,
+        "code": 200,
+        "message": "student deleted successfully!"
+    }
+    );
 });
 
 module.exports = router;
