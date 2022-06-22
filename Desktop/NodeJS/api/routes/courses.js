@@ -94,11 +94,8 @@ router.put("/:studentid/:courseid", async (req, res, next) => {
 
     let found = false;
     const courseList = await student.courses.map(async courseid => {
-        console.log("here96");
         const course = await (Course.findOne({ _id: courseid }));
-        console.log("here98");
         if (course && course.id == courseId) {
-            console.log("here100");
             const lastGrade = course.grade;
             course.name = name;
             course.id = id;
@@ -128,8 +125,41 @@ router.delete("/:studentid/:courseid", async (req, res, next) => {
     const studentId = req.params.studentid;
     const courseId = req.params.courseid;
 
-    return res.status(200).json({
-        "message": "Delete courses" + studentId + " " + courseId
+    if (!studentId) {
+        return error(res, "Student id is empty");
+    }
+
+    const student = await (Student.findOne({ student_id: studentId }));
+    if (!student) return error(res, "Student doest not exist");
+
+    const existCourse = await (Course.findOne({ id: courseId }));
+    if (!existCourse) return error(res, "Course doest not exist");
+
+    let found = false;
+    const courseList = await student.courses.map(async courseid => {
+        const course = await (Course.findOne({ _id: courseid }));
+        if (course && course.id == courseId) {
+            const numberOfCourses = Object.keys(student.courses).length;
+            const newAverage = ((numberOfCourses * student.average) - course.grade) / (numberOfCourses - 1);
+            student.average = newAverage;
+            course.remove();
+            const index = student.courses.indexOf(courseid);
+            if (index > -1) {
+                student.courses.splice(index, 1);
+            }
+            student.last_updated = Date.now();
+            student.save();
+            found = true;
+            return res.status(200).json({
+                "name": course.name,
+                "id": course.id,
+                "grade": course.grade,
+                "code": 200,
+                "message": "course deleted successfully!"
+            });
+        }
     });
+    const list = await Promise.all(courseList);
+    if (!found) return error(res, "Student doest not have this course");
 });
 module.exports = router;
