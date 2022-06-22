@@ -47,16 +47,16 @@ router.get("/", async (req, res, next) => {
             const userCourses = []
             await new Promise((resolve, reject) => item.courses.forEach(async courseId => {
                 const course = await Course.findOne({ _id: courseId }).select('-_id id name grade');
-                if(course) resolveFlagArray.push(course)
-                if(course) userCourses.push(course)
-                if(resolveFlagArray.length === item.courses.length)
+                if (course) resolveFlagArray.push(course)
+                if (course) userCourses.push(course)
+                if (resolveFlagArray.length === item.courses.length)
                     resolve()
             }))
-            newMap.courses = userCourses 
+            newMap.courses = userCourses
             newMap.last_update = item.last_update;
             studentsList.push(newMap)
             studentsListResolveFlag.push(newMap)
-            if(studentsListResolveFlag.length === docs.length)
+            if (studentsListResolveFlag.length === docs.length)
                 resolve()
 
         }))
@@ -93,10 +93,21 @@ router.put("/:studentid", async (req, res, next) => {
     }
     student.student_id = studentid;
     student.save();
+    const resolveFlagArray = []
+    const userCourses = []
+    await new Promise((resolve, reject) => student.courses.forEach(async courseId => {
+        const course = await Course.findOne({ _id: courseId }).select('-_id id name grade');
+        if (course) resolveFlagArray.push(course)
+        if (course) userCourses.push(course)
+        if (resolveFlagArray.length === student.courses.length)
+            resolve()
+    }))
+
+
     return res.status(200).json({
         "studentid": student.student_id,
         "average": student.average,
-        "Courses": student.courses,
+        "Courses": userCourses,
         "last_updated": student.last_update,
         "code": 200,
         "message": "studentid changed successfully!"
