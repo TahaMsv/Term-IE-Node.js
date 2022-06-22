@@ -21,34 +21,25 @@ router.post("/:studentid/course", async (req, res, next) => {
 
     const existCourse = await (Course.findOne({ id: id }));
     if (existCourse && existCourse.name != name) return error(res, "Course with this id has another name");
-    console.log("here24");
-    //check if course is exist
-    console.log(student.courses);
 
-    const list = await student.courses.map(async courseid => {
-        console.log(courseid);
+    let found = false;
+    const groupsList = student.courses.map(async courseid => {
         const course = await (Course.findOne({ _id: courseid }));
-        console.log(course);
-        console.log("here28");
-        if (course && course.id === id) {
-            console.log("here29");
-            return error(res, "Course already exsit");
-        }
+        if (course && course.id === id) found = true;
     });
-    console.log("here34");
-    // add course
+    const list = await Promise.all(groupsList);
+    if (found) { return error(res, "Course already exsit"); }
     const newCourse = await new Course({
         id,
         name, grade
     });
     newCourse.save();
-    console.log("here41");
-    // const newAverage =  ((student.courses.lenght * student.average) + grade)/student.courses.lenght;
+    const numberOfCourses = Object.keys(student.courses).length;
+    const newAverage = ((numberOfCourses * student.average) + grade) / (numberOfCourses + 1);
     student.courses.push(newCourse._id);
-    // student.average = newAverage;
-    // student.last_updated = Date.now();
+    student.average = newAverage;
+    student.last_updated = Date.now();
     student.save();
-
     return res.status(200).json({
         name,
         id,
