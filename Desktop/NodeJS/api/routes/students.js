@@ -127,10 +127,21 @@ router.delete("/:studentid", async (req, res, next) => {
     if (!student) return error(res, "Student doest not exist");
     student.remove();
 
+    const resolveFlagArray = []
+    const userCourses = []
+    await new Promise((resolve, reject) => student.courses.forEach(async courseId => {
+        const course = await Course.findOne({ _id: courseId }).select('-_id id name grade');
+        if (course) resolveFlagArray.push(course)
+        if (course) userCourses.push(course)
+        if (resolveFlagArray.length === student.courses.length)
+            resolve()
+    }))
+
+
     return res.status(200).json({
         "studentid": student.student_id,
         "average": student.average,
-        "Courses": student.courses,
+        "Courses": userCourses,
         "last_updated": student.last_update,
         "code": 200,
         "message": "student deleted successfully!"
