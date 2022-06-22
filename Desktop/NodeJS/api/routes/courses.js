@@ -50,15 +50,30 @@ router.post("/:studentid/course", async (req, res, next) => {
     );
 });
 
+
+
 router.get("/:studentid", async (req, res, next) => {
     const studentId = req.params.studentid;
-    Student.find({ student_id: studentId }).select('-_id student_id average courses last_update').exec((err, docs) => {
+    console.log("here57");
+    Student.find({ student_id: studentId }).select('-_id student_id average courses last_update').exec(async (err, docs) => {
+        console.log("here59");
+        const courseList = docs[0].courses.map(async courseid => {
+            const course = await (Course.findOne({ _id: courseid }));
+            console.log(course);
+            const newMap = {};
+            newMap.name = course.name;
+            newMap.id = course.id;
+            newMap.grade = course.grade;
+            return newMap;
+        });
+        const list = await Promise.all(courseList);
+        console.log("here69");
         return res.status(200).json(
             {
-                "studentid": docs.student_id,
-                "average": docs.average,
-                "Courses": docs.courses,
-                "last_updated": docs.last_updated,
+                "studentid": docs[0].student_id,
+                "average": docs[0].average,
+                "Courses": list,
+                "last_updated": docs[0].last_updated,
                 "code": 200,
                 "message": "All courses received successfully!"
             }
