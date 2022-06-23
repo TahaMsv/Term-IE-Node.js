@@ -9,6 +9,7 @@ const Course = require("../models/course");
 
 
 router.post("/:studentid/course", async (req, res, next) => {
+    console.log("here");
     const studentId = req.params.studentid;
     const { name, id, grade } = req.body;
 
@@ -55,25 +56,30 @@ router.post("/:studentid/course", async (req, res, next) => {
 router.get("/:studentid", async (req, res, next) => {
     const studentId = req.params.studentid;
     Student.find({ student_id: studentId }).select('-_id student_id average courses last_update').exec(async (err, docs) => {
-        const courseList = docs[0].courses.map(async courseid => {
-            const course = await (Course.findOne({ _id: courseid }));
-            const newMap = {};
-            newMap.name = course.name;
-            newMap.id = course.id;
-            newMap.grade = course.grade;
-            return newMap;
-        });
-        const list = await Promise.all(courseList);
-        return res.status(200).json(
-            {
-                "studentid": docs[0].student_id,
-                "average": docs[0].average,
-                "Courses": list,
-                "last_updated": docs[0].last_updated,
-                "code": 200,
-                "message": "All courses received successfully!"
-            }
-        );
+        if (docs.length > 0) {
+            const courseList = docs[0].courses.map(async courseid => {
+                const course = await (Course.findOne({ _id: courseid }));
+                const newMap = {};
+                newMap.name = course.name;
+                newMap.id = course.id;
+                newMap.grade = course.grade;
+                return newMap;
+            });
+            const list = await Promise.all(courseList);
+            return res.status(200).json(
+                {
+                    "studentid": docs[0].student_id,
+                    "average": docs[0].average,
+                    "Courses": list,
+                    "last_updated": docs[0].last_updated,
+                    "code": 200,
+                    "message": "All courses received successfully!"
+                }
+            );
+        } else {
+            return error(res, "Student does not found");
+        }
+
     });
 });
 
